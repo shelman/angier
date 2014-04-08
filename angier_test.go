@@ -3,6 +3,7 @@ package angier
 import (
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+	"time"
 )
 
 func TestTransfer(t *testing.T) {
@@ -13,21 +14,28 @@ func TestTransfer(t *testing.T) {
 			A int
 			B string
 			C bool
+			D time.Time
+
+			// not exported, shouldn't be copied
+			e bool
 		}
 
 		Convey("transferring from one to the other should copy over all of"+
-			" the fields", func() {
+			" the exported fields", func() {
 
 			src := &s{
 				A: 2,
 				B: "hi",
 				C: true,
+				D: time.Now(),
+				e: true,
 			}
 
 			dest := &s{}
 
 			So(Transfer(src, dest), ShouldBeNil)
-			So(src, ShouldResemble, dest)
+			So(dest, ShouldResemble,
+				&s{A: src.A, B: src.B, C: src.C, D: src.D, e: false})
 
 		})
 

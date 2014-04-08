@@ -6,21 +6,21 @@ import (
 )
 
 // Takes in two pointers to structs.  For any fields with the same name and type
-// in the two structs, the values of the fields in the src struct are copied
-// over to the corresponding field in the dest struct.
+// in the two structs, the values of the exported fields in the src struct are
+// copied over to the corresponding field in the dest struct.
 func Transfer(src interface{}, dest interface{}) error {
 
 	// first, check that both are pointers
-	if reflect.TypeOf(src).Kind() != reflect.Ptr ||
-		reflect.TypeOf(dest).Kind() != reflect.Ptr {
+	if reflect.ValueOf(src).Type().Kind() != reflect.Ptr ||
+		reflect.ValueOf(dest).Type().Kind() != reflect.Ptr {
 		return fmt.Errorf("both the src and dest must be pointers")
 	}
 
 	// now, make sure that both are pointers to structs
 	srcVal := reflect.Indirect(reflect.ValueOf(src))
 	destVal := reflect.Indirect(reflect.ValueOf(dest))
-	if reflect.TypeOf(srcVal).Kind() != reflect.Struct ||
-		reflect.TypeOf(destVal).Kind() != reflect.Struct {
+	if srcVal.Type().Kind() != reflect.Struct ||
+		destVal.Type().Kind() != reflect.Struct {
 		return fmt.Errorf("both the src and dest must be pointers to structs")
 	}
 
@@ -40,17 +40,13 @@ func Transfer(src interface{}, dest interface{}) error {
 		srcFieldVal := srcVal.FieldByName(fieldName)
 		destFieldVal := destVal.FieldByName(fieldName)
 
-		switch srcFieldVal.Type().Kind() {
-		case reflect.Bool:
-			destFieldVal.SetBool(srcFieldVal.Bool())
-		case reflect.Int:
-			destFieldVal.SetInt(srcFieldVal.Int())
-		case reflect.String:
-			destFieldVal.SetString(srcFieldVal.String())
-		default:
-			fmt.Println(fmt.Sprintf("field type %v not yet supported",
-				srcFieldVal.Type().Kind()))
+		// make sure the field is exported
+		if !destFieldVal.CanSet() {
+			continue
 		}
+
+		// set the field
+		destFieldVal.Set(srcFieldVal)
 
 	}
 
