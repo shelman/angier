@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestTransfer(t *testing.T) {
+func TestTransferByFieldNames(t *testing.T) {
 
 	Convey("With two structs of the same type", t, func() {
 
@@ -33,7 +33,7 @@ func TestTransfer(t *testing.T) {
 
 			dest := &s{}
 
-			So(Transfer(src, dest), ShouldBeNil)
+			So(TransferByFieldNames(src, dest), ShouldBeNil)
 			So(dest, ShouldResemble,
 				&s{A: src.A, B: src.B, C: src.C, D: src.D, e: false})
 
@@ -86,10 +86,176 @@ func TestTransfer(t *testing.T) {
 
 			dest := &s2{}
 
-			So(Transfer(src, dest), ShouldBeNil)
+			So(TransferByFieldNames(src, dest), ShouldBeNil)
 			So(dest, ShouldResemble, &s2{MatchOne: 2, MatchTwo: true})
 
 		})
 
 	})
+}
+
+func TestTransferByTags(t *testing.T) {
+
+	Convey("With two structs of the same type", t, func() {
+
+		type s struct {
+			A int  `angier:"a"`
+			B bool `angier:"b"`
+			C string
+			d int `angier:"d"`
+		}
+
+		Convey("all exported and tagged fields should be transferred", func() {
+
+			src := &s{
+				A: 2,
+				B: true,
+				C: "hi",
+				d: 3,
+			}
+
+			dest := &s{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s{A: src.A, B: src.B})
+
+		})
+
+	})
+
+	Convey("With two structs of different types", t, func() {
+
+		Convey("fields with no struct tag in the source struct should be"+
+			" ignored", func() {
+
+			type s1 struct {
+				A int
+			}
+
+			type s2 struct {
+				A int `angier:"a"`
+			}
+
+			src := &s1{
+				A: 2,
+			}
+			dest := &s2{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s2{})
+
+		})
+
+		Convey("fields with no struct tag in the destination struct should be"+
+			" ignored", func() {
+
+			type s1 struct {
+				A int `angier:"a"`
+			}
+
+			type s2 struct {
+				A int
+			}
+
+			src := &s1{
+				A: 2,
+			}
+			dest := &s2{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s2{})
+
+		})
+
+		Convey("fields with the same name but different tags should be"+
+			" ignored", func() {
+
+			type s1 struct {
+				A int `angier:"a"`
+			}
+
+			type s2 struct {
+				A int `angier:"b"`
+			}
+
+			src := &s1{
+				A: 2,
+			}
+			dest := &s2{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s2{})
+
+		})
+
+		Convey("fields with the same struct tag but different types should"+
+			" be ignored", func() {
+
+			type s1 struct {
+				A int `angier:"a"`
+			}
+
+			type s2 struct {
+				A bool `angier:"b"`
+			}
+
+			src := &s1{
+				A: 2,
+			}
+			dest := &s2{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s2{})
+
+		})
+
+		Convey("unexported fields should be ignored", func() {
+
+			type s1 struct {
+				a int `angier:"a"`
+			}
+
+			type s2 struct {
+				a int `angier:"a"`
+			}
+
+			src := &s1{
+				a: 2,
+			}
+			dest := &s2{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s2{})
+
+		})
+
+		Convey("exported fields of the same type, with the same struct tags,"+
+			" should be transferred", func() {
+
+			type s1 struct {
+				A  int       `angier:"a"`
+				B1 bool      `angier:"b"`
+				C  time.Time `angier:"c"`
+			}
+
+			type s2 struct {
+				A  int       `angier:"a"`
+				B2 bool      `angier:"b"`
+				C  time.Time `angier:"c"`
+			}
+
+			src := &s1{
+				A:  2,
+				B1: true,
+				C:  time.Now(),
+			}
+			dest := &s2{}
+
+			So(TransferByTags(src, dest), ShouldBeNil)
+			So(dest, ShouldResemble, &s2{A: src.A, B2: src.B1, C: src.C})
+
+		})
+
+	})
+
 }
